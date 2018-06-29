@@ -17,22 +17,41 @@ require(xlsx)
 
 source("basicFunctions.R")
 source("modelDefine.R")
-source("mcmc_fitting.R")
-M<-master_mcmc_runner(20)
+source("mcmc_fitting_3params.R")
+
+# Daw data
+#global values that can be read by the functions in this file.
+daw<-getDAWtable()
+daw_years<-seq(from=1860, to=1940, by=10)
+t_year<-1870
+row_index<-which(daw_years==t_year)
+my_data<-daw$t1Total[row_index,]/2
+
+### initial starting values
+beta_o<-0.1001
+tau<-0.01
+nstart=c(rep(3*10^6, times=9), rep(0, times=9), rep(0, times=9), c(0,1000, rep(0, times=7)), rep(0, times=9))
+# mult<-40
+beta1=getBeta_decayExp(beta_o, tau, t_year)
+parameters<-getParameters(9, mult, beta1)
+time<-seq(from=1, to=365*100, by=1 )
+### Run the model to equilibrium
+output_pre<-as.data.frame(ode(nstart,time,TBmodel_9ageclasses,parameters))
+eqbm<-output_pre[dim(output_pre)[1], ]
+### This eqbm will be read by the function my_log_lh_func_3params
+eqbm
+
+
+M<-master_mcmc_runner(5)
 index<-which.max(M$log_lh)
 M_best<-M[index,]
 
 mult<-M_best$mult
-beta1<-M_best$beta1
+beta_o<-M_best$beta_o
+tau<-M_best$tau
 
-nstart=c(rep(3*10^6, times=9), rep(0, times=9), rep(0, times=9), c(0,1000, rep(0, times=7)), rep(0, times=9))
-# mult<-40
-# beta1=3*24/365
-parameters<-getParameters(9, mult, beta1)
-time<-seq(from=1, to=365*100, by=1 )
 
-output_pre<-as.data.frame(ode(nstart,time,TBmodel_9ageclasses,parameters))
-eqbm<-output_pre[dim(output_pre)[1], ]
+
 #eqbm
 #eqbm[29:37]
 #plotOutputbyDiseaseClass(output_pre)
@@ -46,8 +65,8 @@ daw<-getDAWtable()
 min_age<-c(0, seq(from=5, to=75, by=10))
 quartz()
 par(mfrow=c(1,1), oma=c(0,0,2,0))
-yrange<-range(c(as.numeric(daw$t1Total[1,]/2), modelOP*365))
-plot(min_age, daw$t1Total[1,]/2, type='b', pch=16, lty=1,col="darkblue", lwd=2, xlab="Age Groups", ylab="Annual death rates per million", main="year 1851-1860", sub="source:Daw 1950", ylim=yrange)
+yrange<-range(c(as.numeric(daw$t1Total[row_index,]/2), modelOP*365))
+plot(min_age, daw$t1Total[row_index,]/2, type='b', pch=16, lty=1,col="darkblue", lwd=2, xlab="Age Groups", ylab="Annual death rates per million", main=paste0("year ", t_year-9, " - ", t_year), sub="source:Daw 1950", ylim=yrange)
 lines(min_age, modelOP*365, type='b', pch=16, lty=2, lwd=2, col="darkgreen")
-title(paste("beta =", round(beta1,4)," per day, ", "k =", round(mult,4), sep=" "  ), outer=TRUE)
+title(paste0("beta = ", round(beta1,4)," per day, (beta_o=",beta_o, ",tau= ", tau, ") ", "k =", round(mult,4)), outer=TRUE)
 legend(x=40, y=5000, legend=c("DAW data", "Model output"), lty=c(1,2), lwd=2, col=c("darkblue", "darkgreen"))

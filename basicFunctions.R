@@ -201,4 +201,35 @@ ageStrTBModel_mortality<-function(mult, beta1){
 # beta1<-3*24/365
 # ageStrTBModel_mortality(mult, beta1)
 # 
+
+
+ageStrTBModel_mortality_3params<-function(mult, beta_o, tau, t_year, eqbm){
+ # nstart=c(rep(3*10^6, times=9), rep(0, times=9), rep(0, times=9), c(0,1000, rep(0, times=7)), rep(0, times=9))
+  nstart<-as.numeric(eqbm[-1])
+  # mult<-40
+  # beta1=3*24/365
+  # t_year can be any year, to compare with DAW table it could be 1860 (column 1) to 1940(column 9), in steps of 10.
+  beta1<-getBeta_decayExp(beta_o, tau, t_year)
+  parameters<-getParameters(9, mult, beta1)
+  time<-seq(from=1, to=365*20, by=1 )
+  
+  output_pre<-as.data.frame(ode(nstart,time,TBmodel_9ageclasses,parameters))
+  eqbm<-output_pre[dim(output_pre)[1], ]
+  modelOP<-as.numeric(getEqbmMortalitybyAgeClass(output_pre, parameters$mu_I))
+  modelOP*365
+}
 #   
+## This function returns the value of beta given the starting value and the decay
+## It defines beta as a decaying exponential function.
+## t will be a year from 1850 to 1940
+getBeta_decayExp<-function(beta_o, tau, t){
+#beta_o<-0.1001
+#tau<-0.01
+t_values<-seq(from=1850, to=1940, by=10)
+beta<-beta_o * exp( - tau * ( t_values-1860))
+beta_func<-approxfun(t_values, beta, method="linear")
+return(beta_func(t))
+
+quartz()
+plot(t_values, beta_func(t_values), type='b', lwd=2, pch=16, lty=1, main="time varying beta")
+}
