@@ -30,22 +30,48 @@ my_data<-daw$t1Total[row_index,]/2
 ### initial starting values
 beta_o<-0.1001
 tau<-0.01
-nstart=c(rep(3*10^6, times=9), rep(0, times=9), rep(0, times=9), c(0,1000, rep(0, times=7)), rep(0, times=9))
-# mult<-40
 beta1=getBeta_decayExp(beta_o, tau, t_year)
+mult<-40
 parameters<-getParameters(9, mult, beta1)
-time<-seq(from=1, to=365*100, by=1 )
-### Run the model to equilibrium
-output_pre<-as.data.frame(ode(nstart,time,TBmodel_9ageclasses,parameters))
-eqbm<-output_pre[dim(output_pre)[1], ]
+year_step<-5
+nstart=c(rep(3*10^6, times=9), rep(0, times=9), rep(0, times=9), c(0,1000, rep(0, times=7)), rep(0, times=9))
+time<-seq(from=1, to=365*year_step, by=1 )
+### Run the model to equilibrium by running in steps of "year_step" years
+### year_step is 5, running in steps of 5 years
+### t_period to check for eqbm is 365 days
+### change_limit as tol for change is 1%
+t_period<-365
+change_limit<-1
+eqbmFlag<-FALSE
+eqbm<-numeric()
+t_last<-numeric()
+output_pre_all<-numeric()
+repeat{
+  output_pre<-as.data.frame(ode(nstart,time,TBmodel_9ageclasses,parameters))
+  eqbmFlag<-checkEqbm(output_pre, t_period, change_limit)
+  eqbm<-output_pre[dim(output_pre)[1],]
+  t_last<-as.numeric(eqbm[1])
+  output_pre_all<-rbind(output_pre_all, output_pre)
+  tail(output_pre_all[,1])
+
+  time<-seq(from=t_last+1, to=t_last+(365*year_step), by=1)
+  nstart<-as.numeric(eqbm[-1])
+  if(eqbmFlag==TRUE) 
+    break
+}
+
+
 ### This eqbm will be read by the function my_log_lh_func_3params
 eqbm
+plotOutputByAge(output_pre_all)
+  
 
-
+# Now run the MCMC function to get the best parameters after 5 accepted runs
 M<-master_mcmc_runner(5)
 index<-which.max(M$log_lh)
 M_best<-M[index,]
 
+# get the best parameters
 mult<-M_best$mult
 beta_o<-M_best$beta_o
 tau<-M_best$tau

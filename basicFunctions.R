@@ -233,3 +233,29 @@ return(beta_func(t))
 quartz()
 plot(t_values, beta_func(t_values), type='b', lwd=2, pch=16, lty=1, main="time varying beta")
 }
+
+# This function checks if we have reached equilibrium. 
+# t_period is the time period over which we check the population change, expressed in days.
+# change_limit is the largest change in population over the time period that
+# can be considered as eqbm. Expressed as a percentage.
+
+checkEqbm<-function(output_pre, t_period, change_limit){
+  isEqbm_flag<-FALSE
+  t_max<-output_pre[dim(output_pre)[1],1]
+  output_allCompartments<-matrix(0, nrow = dim(output_pre)[1], ncol = 5)
+  CompIndex<- c(2,11,20,29,38)
+  for(c in 1:length(CompIndex))
+    output_allCompartments[,c]<-as.matrix(rowSums(output_pre[,c:(c+8)]) )
+  
+  total_pop<-rowSums(output_allCompartments)
+  
+  Infected<-output_allCompartments[,4]/total_pop
+    
+  percentage_change<-100*( abs(Infected[dim(output_pre)[1]] - Infected[ dim(output_pre)[1] - t_period])/Infected[ dim(output_pre)[1] - t_period])
+  
+  if(percentage_change<change_limit)
+    isEqbm_flag <- TRUE
+  
+  isEqbm_flag  
+
+}
