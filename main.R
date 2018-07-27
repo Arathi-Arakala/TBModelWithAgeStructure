@@ -1,27 +1,24 @@
-####################################################################
-## Create an age stratified model with age classes aligned to Dawson Paper
-## As this is aimed for is pre-vaccination data, the model will not have
-## vaccination or case detection rate.
-## Create two versions of model 
-## - one where Latent compartments have flow rates into higher age classes
-## - second where Latent compartments don't have flow into higher age classes
-## Compare the mortality rates with that of the Dawson Paper
-## Can we prove that the second model is inaccurate? 
-## This has implications on possible treatment strategies in high endemic settings
-###################################################################
 
-require(deSolve)
-require(graphics)
-require(ggplot2)
-require(xlsx)
+# Create an age stratified model with age classes aligned to the paper
+# (Daw R. The Trend of Mortality from Tuberculosis.)
+# As this is paper is from the pre-vaccination era, vaccination and case
+# detection for treatment is unnecessary.
+# Therefore, we use a simple SEEIR model to fit to these data with the
+# aim of estimating parameter values that may otherwise be difficult to
+# assess epidemiologically.
 
+# load libraries and source scripts
+library(deSolve)
+library(graphics)
+library(ggplot2)
+library(xlsx)
 source("basicFunctions.R")
 source("modelDefine.R")
 source("mcmc_fitting_3params.R")
 
 # Daw data
-#global values that can be read by the functions in this file.
-daw<-getDAWtable()
+# global values that can be read by the functions in this file.
+daw <- getDAWtable()
 daw_years<-seq(from=1860, to=1940, by=10)
 t_year<-1870
 row_index<-which(daw_years==t_year)

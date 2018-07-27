@@ -1,34 +1,41 @@
-#### This file will contain a list of commonly used functions ####
-##################################################################
+
+# This file will contain a list of commonly used functions
+# Function to display the table in DAW paper
+# Excerpt from Daw 1950:
+# "The data used are set out in Table I and consist of the mortality rates 
+# in England and Wales for all forms of tuberculosis. For the years 1851-1920, 
+# the rates were taken or derived from Table 12 of the Registrar-General's
+# Decennial Supplement, 1921, Part III. For 1921-40, the rates have been 
+# calculated from the numbers of deaths and mean populations given in the
+# annual volumes of the Registrar-General's Statistical Review."
 
 source("modelDefine.R")
-
-### 1. Function to display the table in DAW paper #####
-## Excerpt from DAW1950
-## "The data used are set out in Table I and consist of the 
-## mortality rates in England and Wales for all forms of tuberculosis. 
-## For the years 1851-1920, the rates were taken or derived from 
-## Table 12 of the Registrar-General’sDecennial Supplement, 1921, Part III. 
-## For 1921-40, the rates have been calculated from the numbers of deaths 
-## and mean populations given in the annual volumes of the 
-## Registrar-General's StatisticRaelview."
-
-
-getDAWtable<-function(){
-  table1Male<-data.frame(age0=c(6323,6018,5798,5004,4347,3129,1942,1067,612), age5=c(1166,967,828,727,615,552,545,321,184),
-                         age15=c(3400, 3157,2493,1976,1641,1353, 1299,1083, 817), age25=c(4163, 4206, 3785, 3164, 2541,2158, 1840,1413, 1009),
-                         age35=c(4119, 4244, 4198, 3685, 3251, 2622, 2204, 1645, 1134), age45=c(3957, 3969,3928,3611, 3296,2934,2335,1729,1390),
-                         age55=c(3479, 3433, 3285, 3027, 2768, 2574, 2135, 1437, 1287), age65=c(2573, 2174, 2025, 1913, 1706, 1686, 1390, 972, 808),
-                         age75=c(1061, 740, 650, 732,629, 668, 585, 398, 353))
-  table1Female<-data.frame(age0=c(5232, 4917, 4663, 3987, 3516, 2636, 1619, 881, 522), age5=c(1388, 1109, 956, 949, 780, 704, 682, 408, 214), 
-                           age15=c(4079, 3689, 2907, 2267, 1670, 1338, 1470, 1353, 1061), age25=c(4690, 4482, 3631, 2932, 2086, 1651, 1484, 1230, 929),
-                           age35=c(4293, 3988, 3475, 2846, 2264, 1710, 1401, 936, 639), age45=c(3236, 2954, 2535, 2146, 1753, 1449, 1156, 729, 481), 
-                           age55=c(2523, 2178, 1866, 1597, 1344, 1186, 943, 617, 423), age65=c(1783, 1354, 1193, 1058, 906, 894, 750, 511, 358),
-                           age75=c(834, 528, 452, 452, 427, 494, 437, 326, 236))
-  table1Total<-table1Male+table1Female
-  
-  list(t1Male=table1Male, t1Female=table1Female, t1Total=table1Total)
+getDAWtable <- function(){
+  table1Male <- data.frame(
+    age0 = c(6323, 6018, 5798, 5004, 4347, 3129, 1942, 1067, 612), 
+    age5 = c(1166, 967, 828, 727, 615, 552, 545, 321, 184), 
+    age15 = c(3400,  3157, 2493, 1976, 1641, 1353,  1299, 1083,  817), 
+    age25 = c(4163,  4206,  3785,  3164,  2541, 2158,  1840, 1413,  1009), 
+    age35 = c(4119,  4244,  4198,  3685,  3251,  2622,  2204,  1645,  1134), 
+    age45 = c(3957,  3969, 3928, 3611,  3296, 2934, 2335, 1729, 1390), 
+    age55 = c(3479,  3433,  3285,  3027,  2768,  2574,  2135,  1437,  1287), 
+    age65 = c(2573,  2174,  2025,  1913,  1706,  1686,  1390,  972,  808), 
+    age75 = c(1061,  740,  650,  732, 629,  668,  585,  398,  353))
+  table1Female<-data.frame(
+    age0 = c(5232, 4917, 4663, 3987, 3516, 2636, 1619, 881, 522),
+    age5 = c(1388, 1109, 956, 949, 780, 704, 682, 408, 214),
+    age15 = c(4079, 3689, 2907, 2267, 1670, 1338, 1470, 1353, 1061),
+    age25 = c(4690, 4482, 3631, 2932, 2086, 1651, 1484, 1230, 929),
+    age35 = c(4293, 3988, 3475, 2846, 2264, 1710, 1401, 936, 639),
+    age45 = c(3236, 2954, 2535, 2146, 1753, 1449, 1156, 729, 481), 
+    age55 = c(2523, 2178, 1866, 1597, 1344, 1186, 943, 617, 423),
+    age65 = c(1783, 1354, 1193, 1058, 906, 894, 750, 511, 358),
+    age75 = c(834, 528, 452, 452, 427, 494, 437, 326, 236))
+  table1Total <- table1Male + table1Female
+  list(t1Male = table1Male, t1Female = table1Female, t1Total = table1Total)
 }
+
+
 ### plot the data in table per calendar year
 plotTablePerCY<-function(table, type){
   startYears<-seq(from=1851, to=1931, by=10)
