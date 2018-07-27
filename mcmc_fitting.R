@@ -1,12 +1,11 @@
 require(deSolve)
 require(graphics)
 require(ggplot2)
-require(xlsx)
 
-source("basicFunctions.R")
+source("basic_functions.R")
 
-daw<-getDAWtable()
-my_data<-daw$t1Total[1,]/2
+daw<-getDawTable()
+my_data<-daw$Total[1,]/2
 
 metropolis_hastings <- function(log_lh_func, log_priors_func, proposal_func, init_params, n_accepted, max_iterations=1e4){
   # log_lh_func: a function returning the log-likelihood value. This is log( P(data | theta) )

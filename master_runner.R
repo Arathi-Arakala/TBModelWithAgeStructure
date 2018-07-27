@@ -11,18 +11,18 @@
 library(deSolve)
 library(graphics)
 library(ggplot2)
-library(xlsx)
-source("basicFunctions.R")
-source("modelDefine.R")
+source("basic_functions.R")
+source("define_model.R")
 source("mcmc_fitting_3params.R")
+source("mcmc_fitting.R")
 
 # Daw data
 # global values that can be read by the functions in this file.
-daw <- getDAWtable()
+daw <- getDawTable()
 daw_years<-seq(from=1860, to=1940, by=10)
 t_year<-1870
 row_index<-which(daw_years==t_year)
-my_data<-daw$t1Total[row_index,]/2
+my_data<-daw$Total[row_index,]/2
 
 ### initial starting values
 beta_o<-0.1001
@@ -73,8 +73,6 @@ mult<-M_best$mult
 beta_o<-M_best$beta_o
 tau<-M_best$tau
 
-
-
 #eqbm
 #eqbm[29:37]
 #plotOutputbyDiseaseClass(output_pre)
@@ -84,12 +82,12 @@ modelOP<-as.numeric(getEqbmMortalitybyAgeClass(output_pre, parameters$mu_I))
 modelOP*365
 
 # Plot the DAW table for 1851-1860
-daw<-getDAWtable()
+daw<-getDawTable()
 min_age<-c(0, seq(from=5, to=75, by=10))
-quartz()
+windows()
 par(mfrow=c(1,1), oma=c(0,0,2,0))
-yrange<-range(c(as.numeric(daw$t1Total[row_index,]/2), modelOP*365))
-plot(min_age, daw$t1Total[row_index,]/2, type='b', pch=16, lty=1,col="darkblue", lwd=2, xlab="Age Groups", ylab="Annual death rates per million", main=paste0("year ", t_year-9, " - ", t_year), sub="source:Daw 1950", ylim=yrange)
+yrange<-range(c(as.numeric(daw$Total[row_index,]/2), modelOP*365))
+plot(min_age, daw$Total[row_index,]/2, type='b', pch=16, lty=1,col="darkblue", lwd=2, xlab="Age Groups", ylab="Annual death rates per million", main=paste0("year ", t_year-9, " - ", t_year), sub="source:Daw 1950", ylim=yrange)
 lines(min_age, modelOP*365, type='b', pch=16, lty=2, lwd=2, col="darkgreen")
 title(paste0("beta = ", round(beta1,4)," per day, (beta_o=",beta_o, ",tau= ", tau, ") ", "k =", round(mult,4)), outer=TRUE)
 legend(x=40, y=5000, legend=c("DAW data", "Model output"), lty=c(1,2), lwd=2, col=c("darkblue", "darkgreen"))

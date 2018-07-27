@@ -10,9 +10,8 @@
 require(deSolve)
 require(graphics)
 require(ggplot2)
-require(xlsx)
 
-source("basicFunctions.R")
+source("basic_functions.R")
 
 
 
@@ -179,7 +178,7 @@ my_proposal_func_3params <- function(params){
 
 master_mcmc_runner <- function(n_accepted=5){
   init_params = list(mult = 40, beta_o = 0.1001, tau=0.01)
-  M = metropolis_hastings(log_lh_func = my_log_lh_func_3params, log_priors_func = my_log_priors_func_3params, proposal_func = my_proposal_func_3params, init_params = init_params, n_accepted = n_accepted)
+  M = metropolis_hastings_3params(log_lh_func = my_log_lh_func_3params, log_priors_func = my_log_priors_func_3params, proposal_func = my_proposal_func_3params, init_params = init_params, n_accepted = n_accepted)
   return(M)
 }
 

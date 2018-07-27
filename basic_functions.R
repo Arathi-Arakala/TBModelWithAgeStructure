@@ -9,18 +9,18 @@
 # calculated from the numbers of deaths and mean populations given in the
 # annual volumes of the Registrar-General's Statistical Review."
 
-source("modelDefine.R")
-getDAWtable <- function(){
+source("define_model.R")
+getDawTable <- function(){
   table1Male <- data.frame(
     age0 = c(6323, 6018, 5798, 5004, 4347, 3129, 1942, 1067, 612), 
     age5 = c(1166, 967, 828, 727, 615, 552, 545, 321, 184), 
-    age15 = c(3400,  3157, 2493, 1976, 1641, 1353,  1299, 1083,  817), 
-    age25 = c(4163,  4206,  3785,  3164,  2541, 2158,  1840, 1413,  1009), 
-    age35 = c(4119,  4244,  4198,  3685,  3251,  2622,  2204,  1645,  1134), 
-    age45 = c(3957,  3969, 3928, 3611,  3296, 2934, 2335, 1729, 1390), 
-    age55 = c(3479,  3433,  3285,  3027,  2768,  2574,  2135,  1437,  1287), 
-    age65 = c(2573,  2174,  2025,  1913,  1706,  1686,  1390,  972,  808), 
-    age75 = c(1061,  740,  650,  732, 629,  668,  585,  398,  353))
+    age15 = c(3400, 3157, 2493, 1976, 1641, 1353, 1299, 1083, 817), 
+    age25 = c(4163, 4206, 3785, 3164, 2541, 2158, 1840, 1413, 1009), 
+    age35 = c(4119, 4244, 4198, 3685, 3251, 2622, 2204, 1645, 1134), 
+    age45 = c(3957, 3969, 3928, 3611, 3296, 2934, 2335, 1729, 1390), 
+    age55 = c(3479, 3433, 3285, 3027, 2768, 2574, 2135, 1437, 1287), 
+    age65 = c(2573, 2174, 2025, 1913, 1706, 1686, 1390, 972, 808), 
+    age75 = c(1061, 740, 650, 732, 629, 668, 585, 398, 353))
   table1Female<-data.frame(
     age0 = c(5232, 4917, 4663, 3987, 3516, 2636, 1619, 881, 522),
     age5 = c(1388, 1109, 956, 949, 780, 704, 682, 408, 214),
@@ -31,8 +31,8 @@ getDAWtable <- function(){
     age55 = c(2523, 2178, 1866, 1597, 1344, 1186, 943, 617, 423),
     age65 = c(1783, 1354, 1193, 1058, 906, 894, 750, 511, 358),
     age75 = c(834, 528, 452, 452, 427, 494, 437, 326, 236))
-  table1Total <- table1Male + table1Female
-  list(t1Male = table1Male, t1Female = table1Female, t1Total = table1Total)
+  Total <- table1Male + table1Female
+  list(Male = table1Male, Female = table1Female, Total = Total)
 }
 
 
@@ -42,7 +42,7 @@ plotTablePerCY<-function(table, type){
   endYears<-seq(from=1860, to=1940, by=10)
   
   startAge<-c(0, 5, 15, 25,35,45,55,65,75)
-  quartz()
+  windows()
   par(mfrow=c(1,1), oma=c(0,0,2,0))
   for(i in 1:dim(table)[1]){
     if(i==1)
@@ -70,7 +70,7 @@ plotTableMeanBirthYear<-function(table, type){
   }#end of i loop
   
   startAge<-c(0, 5, 15, 25,35,45,55,65,75)
-  quartz()
+  windows()
   par(mfrow=c(1,1), oma=c(0,0,2,0))
   for(i in 1:dim(tableByBirthYear)[1]){
     if(i==1)
@@ -83,14 +83,14 @@ plotTableMeanBirthYear<-function(table, type){
   
 }
 
-# table<-table1Male
+# table<-Male
 # plotTablePerCY(table, "male")
 # plotTableMeanBirthYear(table, "male")
 
 ############################################################################
 
 plotOutputbyDiseaseClass<-function(output_pre){
-  quartz()
+  windows()
   par(mfrow=c(3,2), oma=c(0,0,2,0))
   
 for(c in 2:dim(output_pre)[2]){
@@ -153,7 +153,7 @@ for(c in 2:dim(output_pre)[2]){
 }
 
 plotOutputByAge<-function(output_pre){
-  quartz()
+  windows()
   par(mfrow=c(3,3), oma=c(0,0,2,0))
   maintext<-""
   for(c in 2:10){
@@ -237,7 +237,7 @@ beta<-beta_o * exp( - tau * ( t_values-1860))
 beta_func<-approxfun(t_values, beta, method="linear")
 return(beta_func(t))
 
-quartz()
+windows()
 plot(t_values, beta_func(t_values), type='b', lwd=2, pch=16, lty=1, main="time varying beta")
 }
 
