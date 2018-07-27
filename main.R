@@ -8,7 +8,7 @@
 ## Compare the mortality rates with that of the Dawson Paper
 ## Can we prove that the second model is inaccurate? 
 ## This has implications on possible treatment strategies in high endemic settings
-####################################################################
+###################################################################
 
 require(deSolve)
 require(graphics)
