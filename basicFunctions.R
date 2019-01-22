@@ -202,38 +202,94 @@ ageStrTBModel_mortality<-function(mult, beta1){
 # ageStrTBModel_mortality(mult, beta1)
 # 
 
-
-ageStrTBModel_mortality_3params<-function(mult, beta_o, tau, t_year, eqbm){
+# beta_o and tau are parameters of the time varying beta function, diff to tau_in and tau_out
+ageStrTBModel_mortality_3params<-function(mult, beta_o, tau, gamma, alpha, eqbm, t_year){
  # nstart=c(rep(3*10^6, times=9), rep(0, times=9), rep(0, times=9), c(0,1000, rep(0, times=7)), rep(0, times=9))
   nstart<-as.numeric(eqbm[-1])
   # mult<-40
   # beta1=3*24/365
   # t_year can be any year, to compare with DAW table it could be 1860 (column 1) to 1940(column 9), in steps of 10.
-  beta1<-getBeta_decayExp(beta_o, tau, t_year)
-  parameters<-getParameters(9, mult, beta1)
-  time<-seq(from=1, to=365*20, by=1 )
+  # beta1<-getBeta_decayExp(beta_o, tau, t_year)
+  # parameters<-getParameters(9, mult, beta1)
+  parameters_timevarybeta<-getParameters_timevarybeta(9, mult, beta_o, tau, gamma, alpha)
+  n_years<-t_year-1850 # start year
+  time<-seq(from=1, to=365*n_years, by=1 )
   
-  output_pre<-as.data.frame(ode(nstart,time,TBmodel_9ageclasses,parameters))
-  eqbm<-output_pre[dim(output_pre)[1], ]
-  modelOP<-as.numeric(getEqbmMortalitybyAgeClass(output_pre, parameters$mu_I))
+  output_pre<-as.data.frame(ode(nstart,time,TBmodel_9ageclasses_timevarybeta,parameters_timevarybeta))
+  modelOP<-as.numeric(getEqbmMortalitybyAgeClass(output_pre, parameters_timevarybeta$mu_I))
   modelOP*365
 }
 #   
 ## This function returns the value of beta given the starting value and the decay
 ## It defines beta as a decaying exponential function.
 ## t will be a year from 1850 to 1940
-getBeta_decayExp<-function(beta_o, tau, t){
+## gamma is the value that beta will asymtotically converge to
+getBeta_decayExp<-function(beta_o, tau,gamma, t){
 #beta_o<-0.1001
 #tau<-0.01
 t_values<-seq(from=1850, to=1940, by=10)
-beta<-beta_o * exp( - tau * ( t_values-1860))
-beta_func<-approxfun(t_values, beta, method="linear")
+beta<-(beta_o * exp( - tau * ( t_values-1850)) ) + gamma
+beta_func<-approxfun(t_values-1850, beta, method="linear")
 return(beta_func(t))
 
-quartz()
-plot(t_values, beta_func(t_values), type='b', lwd=2, pch=16, lty=1, main="time varying beta")
 }
 
+#flag indicates if we start a new plot (=1) or overlay on existing plot(=0)
+plotBeta_decayExp<-function(beta_o, tau,gamma, flag){
+ 
+    
+    t_values<-seq(from=1850, to=1940, by=10)
+    beta<-(beta_o * exp( - tau * ( t_values-1850))) + gamma
+    beta_func<-approxfun(t_values-1850, beta, method="linear")
+
+    if(flag==1){
+      quartz()
+      plot(t_values-1850, beta_func(t_values-1850), type='b', lwd=2, pch=16, lty=1, main="time varying beta", ylim=c(0,1))
+      
+    }
+    if(flag==0){
+      lines(t_values-1850, beta_func(t_values-1850),type='b', lwd=2, lty=2)
+    }
+     
+}
+
+#here alpha1 refers to the intensity of re-infection after first infection. Don't confuse with alpha here, which is asssociated with the time varying beta function
+ageStrTBModel_mortality_4params<-function(mult, beta_o, tau, alpha1, gamma, alpha, eqbm, t_year){
+  # nstart=c(rep(3*10^6, times=9), rep(0, times=9), rep(0, times=9), c(0,1000, rep(0, times=7)), rep(0, times=9))
+  nstart<-as.numeric(eqbm[-1])
+  # mult<-40
+  # beta1=3*24/365
+  # t_year can be any year, to compare with DAW table it could be 1860 (column 1) to 1940(column 9), in steps of 10.
+  # beta1<-getBeta_decayExp(beta_o, tau, t_year)
+  # parameters<-getParameters(9, mult, beta1)
+  #parameters_timevarybeta<-getParameters_timevarybeta(9, mult, beta_o, tau, gamma, alpha)
+  parameters_timevarybeta<-getParameters_timevarybeta_alpha(9, mult, beta_o, tau, alpha1, gamma, alpha) #alpha1 is the alpha we refer to
+  
+  n_years<-t_year-1860
+  time<-seq(from=1, to=365*n_years, by=1 )
+  
+  output_pre<-as.data.frame(ode(nstart,time,TBmodel_9ageclasses_timevarybeta,parameters_timevarybeta))
+  modelOP<-as.numeric(getEqbmMortalitybyAgeClass(output_pre, parameters_timevarybeta$mu_I))
+  modelOP*365
+}
+#   
+## This function returns the value of beta given the starting value and the decay
+# ## It defines beta as a decaying exponential function.
+# ## t will be a year from 1850 to 1940
+# getBeta_decayExp<-function(beta_o, tau, t){
+#   #beta_o<-0.1001
+#   #tau<-0.01
+#   t_values<-seq(from=1850, to=1940, by=10)
+#   beta<-beta_o * exp( - tau * ( t_values-1860))
+#   beta_func<-approxfun(t_values-1860, beta, method="linear")
+#   return(beta_func(t))
+#   
+#   
+#   quartz()
+#   plot(t_values-1860, beta_func(t_values-1860), type='b', lwd=2, pch=16, lty=1, main="time varying beta")
+#   points(t, beta_func(t), pch=18, col="red")
+# }
+# 
 # This function checks if we have reached equilibrium. 
 # t_period is the time period over which we check the population change, expressed in days.
 # change_limit is the largest change in population over the time period that
@@ -258,4 +314,37 @@ checkEqbm<-function(output_pre, t_period, change_limit){
   
   isEqbm_flag  
 
+}
+
+#function to plot each disease class across age at a point in time
+#disease class Index varies from 1 to 5 ( S, L_a, L_b, I, R)
+plotDiseaseClassbyAge<-function(output_all){
+  
+  output_last<-output_all[dim(output_all)[1], ]
+  AgeClass<-1:9
+  
+  output_mx<-matrix(as.numeric(output_last[-1]), nrow=5, ncol=9, byrow=TRUE)
+  output_total<-colSums(output_mx)
+  
+  
+  quartz()
+  par(mfrow=c(3,2), oma=c(0,0,2,0))
+  for(diseaseClassIndex in 1:5){
+    
+    titleString<-character()
+    if(diseaseClassIndex==1) titleString<-"S"
+    if(diseaseClassIndex==2) titleString<-"L_a"
+    if(diseaseClassIndex==3) titleString<-"L_b"
+    if(diseaseClassIndex==4) titleString<-"I"
+    if(diseaseClassIndex==5) titleString<-"R"
+    
+    
+    plot(AgeClass, output_mx[diseaseClassIndex,]/output_total, type='b', lty=1, col="blue", pch=16, ylab="Numbers", xlab="Age Classes", main=paste0("Disease Class ",titleString) )
+    
+  }
+   titleString<-" ALL "
+   plot(AgeClass, output_total, type='b', lty=1, col="blue", pch=16, ylab="Numbers", xlab="Age Classes", main=paste0("Disease Class ",titleString) )
+   
+  
+  
 }
