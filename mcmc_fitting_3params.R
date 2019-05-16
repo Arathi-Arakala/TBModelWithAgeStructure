@@ -17,7 +17,7 @@ source("basicFunctions.R")
 
 
 
-metropolis_hastings_3params <- function(log_lh_func_3params, log_priors_func_3params, proposal_func_3params, init_params, n_accepted, max_iterations=1e4){
+metropolis_hastings_3params <- function(log_lh_func, log_priors_func, proposal_func, init_params, n_accepted, max_iterations=1e4){
   # log_lh_func: a function returning the log-likelihood value. This is log( P(data | theta) )
   # priors_func: a function returning the joint prior log-likelihood of the parameters. This is  log( P(theta) )
   # proposal_func (or jumping function): a funciton returning a new parameter set, starting from another parameter set. P(theta' | theta)
@@ -40,8 +40,8 @@ metropolis_hastings_3params <- function(log_lh_func_3params, log_priors_func_3pa
   
   # calculate the likelihoods of the initial parameter set
   current_params = init_params  # current_params is the last accepted set of paramaters 
-  current_log_lh = my_log_lh_func_3params(init_params)
-  current_log_prior = my_log_priors_func_3params(init_params)
+  current_log_lh = log_lh_func(init_params)
+  current_log_prior = log_priors_func(init_params)
   
   while (count_accepted < n_accepted){
     
@@ -51,11 +51,11 @@ metropolis_hastings_3params <- function(log_lh_func_3params, log_priors_func_3pa
     }
     
     # Generate a new candidate parameter set
-    proposed_params = my_proposal_func_3params(current_params)
+    proposed_params = proposal_func(current_params)
     
     # Evaluate the likelihood of the new parameter set
-    proposed_log_lh = my_log_lh_func_3params(proposed_params)
-    proposed_log_prior = my_log_priors_func_3params(proposed_params)
+    proposed_log_lh = log_lh_func(proposed_params)
+    proposed_log_prior = log_priors_func(proposed_params)
     
     # Acceptance or rejection?
     accepted = 0
@@ -76,6 +76,7 @@ metropolis_hastings_3params <- function(log_lh_func_3params, log_priors_func_3pa
     
     # If the run is accepted, we update the relevant variables
     if (accepted==1){ 
+      
       current_params = proposed_params
       current_log_prior = proposed_log_prior
       current_log_lh = proposed_log_lh
@@ -83,6 +84,7 @@ metropolis_hastings_3params <- function(log_lh_func_3params, log_priors_func_3pa
     }
     
     count_iterations = count_iterations + 1
+    #print(c(accepted, proposed_params) )
     print(c(count_iterations, count_accepted))
   }
   
@@ -120,8 +122,8 @@ my_log_lh_func_3params <- function(params){
   # params is a list of parameters and associated values.
   # return the likelihood value associated with the parameter set.
   
-  # run the TB model with the input parameters, output will be mortality over 9 age groups
-  tb_results = ageStrTBModel_mortality_3params(params$mult, params$beta_o, params$tau, gamma, alpha, eqbm, t_year)
+  # run the TB model with the input parameters, output will be mortality over 9 age groups. 
+  tb_results = ageStrTBModel_mortality_3params(params$mult, params$beta_o, params$tau, gamma, alpha, t_year)
   
   # Our likelihood is obtained by multiplying Gaussian elements centered on the model estimate for each datapoint.
   # We assume that the standard deviation is 0.05. This means that 95% of the Gaussian dentisty sits within an 
@@ -140,7 +142,13 @@ my_log_lh_func_3params <- function(params){
 my_log_lh_func_3params_allDaw<- function(params){
   # params is a list of parameters and associated values.
   # return the likelihood value associated with the parameter set.
-  overall_log_lh_alldaw<-numeric()
+  
+  #Run the model for the given parameters.
+  #Get mortality for all DAW years with these parameters
+  tb_results_all<-ageStrTBModel_mortality_3params_allDawYears(params$mult, params$beta_o, params$tau, gamma, alpha)
+  
+  
+  overall_log_lh_alldaw<-0
   daw_years<-seq(from=1860, to=1940, by=10)
   
   for(t in 1:length(daw_years)){
@@ -148,9 +156,7 @@ my_log_lh_func_3params_allDaw<- function(params){
     row_index<-which(daw_years==t_year)
     my_data_year<-daw$t1Total[row_index,]/2
     
-    # run the TB model with the input parameters, output will be mortality over 9 age groups
-    tb_results = ageStrTBModel_mortality_3params(params$mult, params$beta_o, params$tau, gamma, alpha, eqbm, t_year)
-    
+    tb_results<-tb_results_all[t,]
     # Our likelihood is obtained by multiplying Gaussian elements centered on the model estimate for each datapoint.
     # We assume that the standard deviation is 0.05. This means that 95% of the Gaussian dentisty sits within an 
     # interval of width 0.1 (2*sd).
@@ -161,8 +167,8 @@ my_log_lh_func_3params_allDaw<- function(params){
       single_log_lh = dnorm(x=as.numeric(my_data_year[i]) , mean=model_output ,sd = sd, log = TRUE)
       overall_log_lh = overall_log_lh + single_log_lh
     }
-    
     overall_log_lh_alldaw<-overall_log_lh_alldaw+overall_log_lh
+    #print(overall_log_lh_alldaw)
     
   }#end of t loop
 
@@ -175,13 +181,17 @@ my_log_priors_func_3params <- function(params){
   joint_log_prior = 0
   for (param_name in names(params)){
     if (param_name == "mult"){  # flat prior
-      y = dunif(x=params[[param_name]], min = 30, max = 45,log = TRUE)
+      y = dunif(x=params[[param_name]], min = 5, max = 45,log = TRUE)
     }else if(param_name == "beta_o"){  # flat prior
-      y = dunif(x=params[[param_name]], min = 0.05, max = 1, log=TRUE)
-    }
+     # y = dunif(x=params[[param_name]], min = 0.0001, max = 1, log=TRUE)
+      y = dunif(x=params[[param_name]], min = 0.1, max = 0.4, log=TRUE)
+      
+      }
     else if(param_name == "tau"){  # flat prior
-      y = dunif(x=params[[param_name]], min = 0.00002, max = 1e6, log=TRUE)
-    }
+      #y = dunif(x=params[[param_name]], min = 0.000002, max = 1, log=TRUE)
+      y = dunif(x=params[[param_name]], min = 0.000002, max = 0.0002, log=TRUE)
+      
+      }
     
     
     joint_log_prior = joint_log_prior + y
@@ -196,7 +206,7 @@ my_proposal_func_3params <- function(params){
   # We use normal distributions to generate new parameter values
   
   # standard deviations
-  sd=list(mult=10, beta_o=0.1, tau=1)
+  sd=list(mult=2, beta_o=0.01, tau=0.000002)
   
   new_params = list()
   for (param_name in names(params)){
@@ -215,13 +225,15 @@ my_proposal_func_3params <- function(params){
 
 master_mcmc_runner_3params <- function(n_accepted=5, singleYear_flag=TRUE){
   if(singleYear_flag==TRUE){
-    init_params = list(mult = 40, beta_o = 0.1, tau=1)
+    init_params = list(mult = 40, beta_o = 0.25, tau=0.0001)
     M = metropolis_hastings_3params(log_lh_func = my_log_lh_func_3params, log_priors_func = my_log_priors_func_3params, proposal_func = my_proposal_func_3params, init_params = init_params, n_accepted = n_accepted)
   }
   # fit to all the 90 daw data points
+  #beta_o=0.2
   if(singleYear_flag==FALSE){
-    init_params = list(mult = 40, beta_o = 0.1, tau=0.1)
-    M = metropolis_hastings_3params(log_lh_func = my_log_lh_func_3params_allDaw, log_priors_func = my_log_priors_func_3params, proposal_func = my_proposal_func_3params, init_params = init_params, n_accepted = n_accepted)
+    #init_params = list(mult = 40, beta_o = 0.25, tau=0.00001)
+    init_params = list(mult = 25, beta_o = 0.24, tau=0.00002)
+    M = metropolis_hastings_3params(log_lh_func=my_log_lh_func_3params_allDaw, log_priors_func=my_log_priors_func_3params, proposal_func=my_proposal_func_3params, init_params = init_params, n_accepted = n_accepted)
   } 
   return(M)
 }

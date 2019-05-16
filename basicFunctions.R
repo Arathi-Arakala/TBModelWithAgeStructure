@@ -203,35 +203,82 @@ ageStrTBModel_mortality<-function(mult, beta1){
 # 
 
 # beta_o and tau are parameters of the time varying beta function, diff to tau_in and tau_out
-ageStrTBModel_mortality_3params<-function(mult, beta_o, tau, gamma, alpha, eqbm, t_year){
- # nstart=c(rep(3*10^6, times=9), rep(0, times=9), rep(0, times=9), c(0,1000, rep(0, times=7)), rep(0, times=9))
-  nstart<-as.numeric(eqbm[-1])
-  # mult<-40
-  # beta1=3*24/365
-  # t_year can be any year, to compare with DAW table it could be 1860 (column 1) to 1940(column 9), in steps of 10.
-  # beta1<-getBeta_decayExp(beta_o, tau, t_year)
-  # parameters<-getParameters(9, mult, beta1)
-  parameters_timevarybeta<-getParameters_timevarybeta(9, mult, beta_o, tau, gamma, alpha)
-  n_years<-t_year-1850 # start year
-  time<-seq(from=1, to=365*n_years, by=1 )
+#This function returns the age specific mortality for a given parameter set and goven year t_year
+ageStrTBModel_mortality_3params<-function(mult, beta_o, tau, gamma, alpha, t_year){
+ 
+  # run to eqbm for the given beta_o n tau
+  beta1=getBeta_decayExp(beta_o, tau, gamma, t_year-1850)
+  #mult<-40
+  parameters<-getParameters(9, mult, beta1)
+  EqbmOutput<-IsEqbm(parameters)
+  eqbm<-EqbmOutput$eqbm
   
-  output_pre<-as.data.frame(ode(nstart,time,TBmodel_9ageclasses_timevarybeta,parameters_timevarybeta))
+  #use eqbm as starting conditions for ode run
+  nstart<-as.numeric(eqbm[-1])
+  parameters_timevarybeta<-getParameters_timevarybeta(9, mult, beta_o, tau, gamma, alpha)
+  
+  
+  n_years<-t_year-1850 # start year
+  time<-seq(from=1, to=365*n_years, by=100 ) #timestep output monthly to speed up
+  #run ode and get age specific mortality for the chosen t_year
+  #output_pre<-as.data.frame(ode(nstart,time,TBmodel_9ageclasses_timevarybeta,parameters_timevarybeta))
+  output_pre<-as.data.frame(ode(nstart,time,TBmodel_9ageclasses_timevarybeta_closedpopln,parameters_timevarybeta))
+  
   modelOP<-as.numeric(getEqbmMortalitybyAgeClass(output_pre, parameters_timevarybeta$mu_I))
   modelOP*365
+}
+
+# beta_o and tau are parameters of the time varying beta function, diff to tau_in and tau_out
+#This function returns the age specific mortality for a given parameter set 
+#output is for all years.
+#output should be a matrix of mortalities over Daw years versus age
+ageStrTBModel_mortality_3params_allDawYears<-function(mult, beta_o, tau, gamma, alpha){
+
+    # run to eqbm for the given beta_o n tau at the starting year 1860
+  beta1=getBeta_decayExp(beta_o, tau, gamma, alpha-1850)
+  #mult<-40
+  parameters<-getParameters(9, mult, beta1)
+  EqbmOutput<-IsEqbm(parameters)
+  eqbm<-EqbmOutput$eqbm
+  
+  #use eqbm as starting conditions for ode run
+  nstart<-as.numeric(eqbm[-1])
+  parameters_timevarybeta<-getParameters_timevarybeta(9, mult, beta_o, tau, gamma, alpha)
+  
+  #rows are daw years, 1860 to 1940
+  #columns are 9 age classes
+  modelOP_all<-matrix(0, nrow=9, ncol=9)
+  daw_years<-seq(from=1860, to=1940, by=10)
+  
+  for(t in 1:length(daw_years) ){
+    t_year<-daw_years[t]
+    n_years<-t_year-1850 # start year
+    time<-seq(from=1, to=365*n_years, by=100 ) #timestep output monthly to speed up
+    #run ode and get age specific mortality for the chosen t_year
+    #output_pre<-as.data.frame(ode(nstart,time,TBmodel_9ageclasses_timevarybeta,parameters_timevarybeta))
+    output_pre<-as.data.frame(ode(nstart,time,TBmodel_9ageclasses_timevarybeta_closedpopln,parameters_timevarybeta))
+    
+    modelOP<-as.numeric(getEqbmMortalitybyAgeClass(output_pre, parameters_timevarybeta$mu_I))
+   
+    modelOP_all[t,]<-modelOP*365
+
+  }
+  modelOP_all
+ 
 }
 #   
 ## This function returns the value of beta given the starting value and the decay
 ## It defines beta as a decaying exponential function.
-## t will be a year from 1850 to 1940
+## t will be a day from 1850 to 1940, day1 of 1850 is t=0, and increases daily from there.
 ## gamma is the value that beta will asymtotically converge to
 getBeta_decayExp<-function(beta_o, tau,gamma, t){
 #beta_o<-0.1001
 #tau<-0.01
-t_values<-seq(from=1850, to=1940, by=10)
-beta<-(beta_o * exp( - tau * ( t_values-1850)) ) + gamma
-beta_func<-approxfun(t_values-1850, beta, method="linear")
-return(beta_func(t))
-
+  t_values<-seq(from=1850, to=1940, by=10)
+  t_values_timeshift_daily<-(t_values-1850)*365
+  beta<-(beta_o * exp( - tau * ( t_values_timeshift_daily))) + gamma
+  beta_func<-approxfun(t_values_timeshift_daily, beta, method="linear")
+  return(beta_func(t))
 }
 
 #flag indicates if we start a new plot (=1) or overlay on existing plot(=0)
@@ -239,16 +286,17 @@ plotBeta_decayExp<-function(beta_o, tau,gamma, flag){
  
     
     t_values<-seq(from=1850, to=1940, by=10)
-    beta<-(beta_o * exp( - tau * ( t_values-1850))) + gamma
-    beta_func<-approxfun(t_values-1850, beta, method="linear")
+    t_values_timeshift_daily<-(t_values-1850)*365
+    beta<-(beta_o * exp( - tau * ( t_values_timeshift_daily))) + gamma
+    beta_func<-approxfun(t_values_timeshift_daily, beta, method="linear")
 
     if(flag==1){
       quartz()
-      plot(t_values-1850, beta_func(t_values-1850), type='b', lwd=2, pch=16, lty=1, main="time varying beta", ylim=c(0,1))
+      plot(t_values_timeshift_daily, beta_func(t_values_timeshift_daily), type='b', lwd=2, pch=16, lty=1, main="time varying beta", ylim=c(0,beta_o))
       
     }
     if(flag==0){
-      lines(t_values-1850, beta_func(t_values-1850),type='b', lwd=2, lty=2)
+      lines(t_values_timeshift_daily, beta_func(t_values_timeshift_daily),type='b', lwd=2, lty=2)
     }
      
 }
@@ -325,7 +373,7 @@ plotDiseaseClassbyAge<-function(output_all){
   
   output_mx<-matrix(as.numeric(output_last[-1]), nrow=5, ncol=9, byrow=TRUE)
   output_total<-colSums(output_mx)
-  
+
   
   quartz()
   par(mfrow=c(3,2), oma=c(0,0,2,0))
@@ -338,7 +386,6 @@ plotDiseaseClassbyAge<-function(output_all){
     if(diseaseClassIndex==4) titleString<-"I"
     if(diseaseClassIndex==5) titleString<-"R"
     
-    
     plot(AgeClass, output_mx[diseaseClassIndex,]/output_total, type='b', lty=1, col="blue", pch=16, ylab="Numbers", xlab="Age Classes", main=paste0("Disease Class ",titleString) )
     
   }
@@ -347,4 +394,72 @@ plotDiseaseClassbyAge<-function(output_all){
    
   
   
+}
+
+# function that runs an ode model to equilibrium.
+IsEqbm<-function(parameters){
+  year_step<-5
+  nstart=c(rep(3*10^6, times=9), rep(0, times=9), rep(0, times=9), c(0,1000, rep(0, times=7)), rep(0, times=9))
+  time<-seq(from=1, to=365*year_step, by=1 )
+  
+  ### Run the model to equilibrium by running in steps of "year_step" years
+  ### year_step is 5, running in steps of 5 years
+  ### t_period to check for eqbm is 365 days
+  ### change_limit as tol for change is 1%
+  t_period<-365
+  change_limit<-1
+  eqbmFlag<-FALSE
+  eqbm<-numeric()
+  t_last<-numeric()
+  output_pre_all<-numeric()
+  repeat{
+    output_pre<-as.data.frame(ode(nstart,time,TBmodel_9ageclasses,parameters))
+    eqbmFlag<-checkEqbm(output_pre, t_period, change_limit)
+    eqbm<-output_pre[dim(output_pre)[1],]
+    t_last<-as.numeric(eqbm[1])
+    output_pre_all<-rbind(output_pre_all, output_pre)
+    tail(output_pre_all[,1])
+    
+    time<-seq(from=t_last+1, to=t_last+(365*year_step), by=1)
+    nstart<-as.numeric(eqbm[-1])
+    if(eqbmFlag==TRUE) 
+      break
+  }
+  
+  
+ list(eqbm=eqbm, output_pre_all=output_pre_all)
+}
+
+### Function to plot the total population over time. 
+plotTotalPopln<-function(output){
+  total_popln<-cbind(output[,1],rowSums(output[,2:46]) )
+  quartz()
+  plot(total_popln[,1], total_popln[,2], type='l', lwd=2, ylim=c(max(total_popln[,2])-1000,max(total_popln[,2])+1000) )
+}
+
+
+# yearsFrom1940 is the number of years backwards from 1940 we want to view the plot
+# yearsFrom1940=10,20, etc
+plotCompartmentalDisbnByAgeGroup<-function(output_all, t_year){
+   output_last<-output_all[ (dim(output_all)[1]), ]
+  AgeClass<-1:9
+  
+  output_mx<-matrix(as.numeric(output_last[-1]), nrow=5, ncol=9, byrow=TRUE)
+  output_total<-colSums(output_mx)
+  output_proportion<-matrix(0, nrow=5, ncol=9)
+  
+  for(diseaseClassIndex in 1:5){
+    output_proportion[diseaseClassIndex,]<-output_mx[diseaseClassIndex,]/output_total
+  }
+ DF<-as.data.frame( cbind(1:9, t(output_proportion) ) ) 
+ colnames(DF)<-c("Ageclass", "S", "L_a", "L_b", "I", "R")
+ library(reshape2)
+ DF1<-melt(DF, id.var="Ageclass")
+ quartz()
+ par(mfrow=c(1,1), oma=c(0,0,2,0))
+ ggplot(DF1, aes(x = Ageclass, y = value, fill = variable)) + 
+   geom_bar(stat = "identity") +
+   scale_x_continuous(breaks=seq(1,9,1))+
+   ggtitle(paste0("year ", t_year))
+ 
 }
