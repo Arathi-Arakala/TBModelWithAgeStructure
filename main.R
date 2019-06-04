@@ -13,6 +13,7 @@
 require(deSolve)
 require(graphics)
 require(ggplot2)
+library(colorspace)
 require(xlsx)
 library(reshape2)
 
@@ -29,8 +30,22 @@ daw_total<-daw$t1Total
 daw_years<-seq(from=1850, to=1930, by=10)
 daw_total<-cbind(daw_years, daw_total)
 daw_total_df<-melt(daw_total, id.vars = "daw_years", measure.vars =  c("age0", "age5", "age15", "age25", "age35", "age45", "age55", "age65", "age75" ) )
+colnames(daw_total_df)<-c("daw_years", "Age", "Mortality") 
 
-#daw_plot<-ggplot(daw_total_df, )
+#cbPalette <- c("#000000", "#E69F00", "#56B4E9", "#009E73", "#F0E442", "#0072B2", "#D55E00", "#CC79A7")
+
+daw_plot<-ggplot(daw_total_df, aes(x=Age, y=Mortality, group=daw_years) ) +
+  geom_line(aes(color=daw_years))+
+  geom_point(aes(color=daw_years))+
+  scale_colour_gradientn(colours=rainbow(4))+
+  labs(title="TB Death Rates in England and Wales",x="Lower bound of dge groups (years)", y = "Death rate ( per million)")
+  
+quartz()
+daw_plot
+#save the plot as a pdf
+pdf("/Users/Arathi/Documents/2019/Monash/FiguresAndOutputs/Daw1950.pdf")
+print(daw_plot)
+dev.off()
 # # Daw data
 # #global values that can be read by the functions in this file.
 # daw<-getDAWtable()
